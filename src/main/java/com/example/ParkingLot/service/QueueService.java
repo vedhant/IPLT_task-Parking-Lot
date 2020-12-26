@@ -43,7 +43,7 @@ public class QueueService {
             Integer relocate = request.getRelocate();
             CompletableFuture parkingRequest = request.getParkingRequest();
             if(parkCar == 1) {
-                Thread.sleep(1000L);
+                Thread.sleep(5000L);
                 if(parkingQueueDao.insertCarToQueue(carId, queueId) == 0) {
                     parkingRequest.complete(0);
                     continue;
@@ -55,7 +55,7 @@ public class QueueService {
             }
             else {
                 while(true) {
-                    Thread.sleep(1000L);
+                    Thread.sleep(3000L);
                     Integer fetchCarId = parkingQueueDao.getFrontCarId(queueId);
                     parkingQueueDao.removeCar(queueId);
                     if(fetchCarId == carId) {
