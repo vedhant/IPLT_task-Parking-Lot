@@ -15,16 +15,16 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -95,5 +95,51 @@ class ParkingLotControllerTest {
         assertEquals(2, queue2.get(1));
         assertEquals(7, queue2.get(2));
         assertEquals(1, 1);
+    }
+
+    @Test
+    void integrationTest() throws Exception {
+        RequestBuilder request = MockMvcRequestBuilders.post("/api/parkCars/30");
+        mvc.perform(request).andReturn();
+
+        CompletableFuture<Void> asyncRequest1 = AsyncRequest.sendRequestAsync(
+                MockMvcRequestBuilders.post("/api/fetchCar/1"), mvc
+        );
+        CompletableFuture<Void> asyncRequest2 = AsyncRequest.sendRequestAsync(
+                MockMvcRequestBuilders.post("/api/fetchCar/12"), mvc
+        );
+        CompletableFuture<Void> asyncRequest3 = AsyncRequest.sendRequestAsync(
+                MockMvcRequestBuilders.post("/api/fetchCar/18"), mvc
+        );
+
+        CompletableFuture.allOf(asyncRequest1, asyncRequest2, asyncRequest3).join();
+
+        List<BlockingQueue<BlockingQueueRequest>> parkBlockingQueues = queueService.getParkBlockingQueues();
+
+        for(BlockingQueue<BlockingQueueRequest> blockingQueue : parkBlockingQueues) {
+            synchronized (blockingQueue) {
+                while(!blockingQueue.isEmpty())
+                    blockingQueue.wait();
+            }
+        }
+
+        System.out.println(parkingLotService.getParkLotStatus());
+
+        List<ParkingQueue> parkingQueues = parkingQueueDao.getAllParkingQueues();
+
+        ArrayList<Integer>[] expected = new ArrayList[5];
+        expected[0] = new ArrayList<>(Arrays.asList(6, 11, 16, 21, 26));
+        expected[1] = new ArrayList<>(Arrays.asList(17, 22, 27, 2, 7));
+        expected[2] = new ArrayList<>(Arrays.asList(23, 28, 3, 8, 13));
+        expected[3] = new ArrayList<>(Arrays.asList(4, 9, 14, 19, 24, 29));
+        expected[4] = new ArrayList<>(Arrays.asList(5, 10, 15, 20, 25, 30));
+
+        for(int i = 0; i < 5; ++i) {
+            Queue<Integer> queue = parkingQueues.get(i).getQueue();
+            assertEquals(expected[i].size(), queue.size());
+            for(int j = 0; j < queue.size(); ++j) {
+                assertEquals(expected[i].get(j), queue.poll());
+            }
+        }
     }
 }
