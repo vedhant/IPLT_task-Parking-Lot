@@ -41,16 +41,6 @@ public class ParkingLotController {
     @RequestMapping("api/showCarParkStatus")
     @GetMapping
     public String showCarParkStatus() {
-        List<ParkingQueue> parkingQueues = parkingLotService.getParkLotStatus();
-        String status = "";
-        for(ParkingQueue parkingQueue : parkingQueues) {
-            status += "Queue " + parkingQueue.getId() + " : ";
-            Queue<Integer> queue = parkingQueue.getQueue();
-            for(Integer carId : queue) {
-                status += carId + " , ";
-            }
-            status += '\n';
-        }
-        return status;
+        return parkingLotService.getParkLotStatus();
     }
 }

@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 @Service
 public class ParkingLotService {
@@ -30,8 +30,10 @@ public class ParkingLotService {
         this.parkingQueueDao = parkingQueueDao;
         this.carDao = carDao;
         this.queueService = queueService;
-        for(int i = 0; i < 5; ++i)
-            this.queueService.FetchFromBlockingQueue(i + 1);
+        for(int i = 0; i < 5; ++i) {
+            this.queueService.ProcessParkBlockingQueue(i + 1);
+            this.queueService.ProcessFetchBlockingQueue(i + 1);
+        }
     }
 
     public int parkCars(Integer N) {
@@ -79,7 +81,17 @@ public class ParkingLotService {
         return maxId;
     }
 
-    public List<ParkingQueue> getParkLotStatus() {
-        return parkingQueueDao.getAllParkingQueues();
+    public String getParkLotStatus() {
+        List<ParkingQueue> parkingQueues = parkingQueueDao.getAllParkingQueues();
+        String status = "";
+        for(ParkingQueue parkingQueue : parkingQueues) {
+            status += "Queue " + parkingQueue.getId() + " : ";
+            Queue<Integer> queue = parkingQueue.getQueue();
+            for(Integer carId : queue) {
+                status += carId + " , ";
+            }
+            status += '\n';
+        }
+        return status;
     }
 }
